@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Form</title>
+    <style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background-color: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 500px;
+    border-top: 5px solid #009688;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 25px; 
+    background-color: #f0f0f0;
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+textarea {
+    border-radius: 15px; 
+    resize: vertical;
+    min-height: 100px;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    background-color: #e0e0e0;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: #009688; 
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+button:hover {
+    background-color: #00796b;
+}
+
+button span {
+    margin-left: 8px;
+}
+
+#responseMessage {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+    color: #333;
+    min-height: 20px;
+}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Feedback Form</h2>
+    <form id="feedbackForm">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" placeholder="Enter Name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" placeholder="Enter email" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="subject">Subject:</label>
+            <input type="text" id="subject" placeholder="Enter subject" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Message:</label>
+            <textarea id="message" placeholder="Enter message" required></textarea>
+        </div>
+        
+        <button type="submit">Submit <span>&rarr;</span></button>
+    </form>
+    <div id="responseMessage"></div>
+</div>
+
+<script>
+const form = document.getElementById('feedbackForm');
+const responseMsg = document.getElementById('responseMessage');
+
+// Handle Form Submission
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        subject: document.getElementById('subject').value,
+        message: document.getElementById('message').value
+    };
+
+    try {
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            responseMsg.style.color = 'green';
+            responseMsg.textContent = `Success! Feedback ID ${data.id} created.`;
+            form.reset();
+        } else {
+            throw new Error('Failed to submit');
+        }
+    } catch (error) {
+        responseMsg.style.color = 'red';
+        responseMsg.textContent = 'Error submitting form.';
+        console.error(error);
+    }
+});
+</script>
+</body>
+</html>
