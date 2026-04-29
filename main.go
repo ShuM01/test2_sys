@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,60 @@ type Feedback struct {
 	Email   string `json:"email"`
 	Subject string `json:"subject"`
 	Message string `json:"message"`
+}
+
+// emailRegex validates standard email format
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+// validateFeedback checks that all required fields are present, non-empty, within length limits,
+// and that the email format is valid. Returns the validated Feedback with trimmed fields and an error string.
+func validateFeedback(f Feedback) (Feedback, string) {
+	// Trim whitespace from all fields
+	name := strings.TrimSpace(f.Name)
+	email := strings.TrimSpace(f.Email)
+	subject := strings.TrimSpace(f.Subject)
+	message := strings.TrimSpace(f.Message)
+
+	// Check empty fields
+	if name == "" {
+		return f, "Name is required"
+	}
+	if email == "" {
+		return f, "Email is required"
+	}
+	if subject == "" {
+		return f, "Subject is required"
+	}
+	if message == "" {
+		return f, "Message is required"
+	}
+
+	// Check field length limits
+	if len(name) > 100 {
+		return f, "Name must be 100 characters or fewer"
+	}
+	if len(email) > 255 {
+		return f, "Email must be 255 characters or fewer"
+	}
+	if len(subject) > 200 {
+		return f, "Subject must be 200 characters or fewer"
+	}
+	if len(message) > 5000 {
+		return f, "Message must be 5000 characters or fewer"
+	}
+
+	// Validate email format
+	if !emailRegex.MatchString(email) {
+		return f, "Invalid email format"
+	}
+
+	// Return feedback with trimmed values
+	f.Name = name
+	f.Email = email
+	f.Subject = subject
+	f.Message = message
+
+	return f, ""
 }
 
 var db *sql.DB
@@ -130,7 +185,13 @@ func HandleCollection(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		var f Feedback
 		if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+			return
+		}
+		// Validate and trim feedback data
+		f, errMsg := validateFeedback(f)
+		if errMsg != "" {
+			http.Error(w, errMsg, http.StatusBadRequest)
 			return
 		}
 		id, err := InsertFeedback(f)
@@ -170,7 +231,13 @@ func HandleItem(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		var f Feedback
 		if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+			return
+		}
+		// Validate and trim feedback data
+		f, errMsg := validateFeedback(f)
+		if errMsg != "" {
+			http.Error(w, errMsg, http.StatusBadRequest)
 			return
 		}
 		f.ID = id
