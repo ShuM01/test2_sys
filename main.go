@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -23,35 +22,11 @@ type Feedback struct {
 	Message string `json:"message"`
 }
 
-func ReadJSON(filename string) ([]Feedback, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var feedbacks []Feedback
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&feedbacks)
-	return feedbacks, err
-}
-
-func WriteJSON(filename string, feedbacks []Feedback) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	return encoder.Encode(feedbacks)
-}
-
 var db *sql.DB
 
 func InitDB() error {
 	var err error
-	db, err = sql.Open("postgres", "user=feedback password=test2 dbname=feedback_form sslmode=disable")
+	db, err = sql.Open("postgres", "postgres://feedback:test2@localhost/feedback_form?sslmode=disable")
 	if err != nil {
 		return err
 	}
@@ -120,12 +95,12 @@ func InsertFeedback(f Feedback) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	result, err := db.Exec("INSERT INTO feedbacks (data) VALUES ($1)", string(data))
+	var id int
+	err = db.QueryRow("INSERT INTO feedbacks (data) VALUES ($1) RETURNING id", string(data)).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
-	id, err := result.LastInsertId()
-	return int(id), err
+	return id, nil
 }
 
 func UpdateFeedback(id int, f Feedback) error {
@@ -183,7 +158,7 @@ func HandleItem(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		f, err := GetFeedbackByID(id)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err.Error() == "sql: no rows in result set" {
 				http.NotFound(w, r)
 			} else {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
